@@ -1,7 +1,7 @@
 # renovate: datasource=github-releases depName=NLnetLabs/unbound extractVersion=^release-(?<version>.*)$
 ARG UNBOUND_VERSION=1.26.1
 
-FROM alpine:3.23 AS build
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS build
 ARG UNBOUND_VERSION
 RUN apk add --no-cache \
     build-base \
@@ -24,7 +24,7 @@ RUN ./configure \
     && make -j"$(nproc)" \
     && make install DESTDIR=/tmp/install
 
-FROM alpine:3.23
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
 RUN apk add --no-cache \
     libevent \
     openssl \

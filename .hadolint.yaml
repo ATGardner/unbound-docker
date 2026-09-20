@@ -1,0 +1,5 @@
+ignored:
+  # The Alpine version (pinned via `FROM alpine:3.23`) is the pin for these
+  # runtime/build packages - the dependency this repo actually tracks
+  # (unbound itself) is pinned separately via UNBOUND_VERSION.
+  - DL3018

@@ -52,12 +52,32 @@ jobs:
     if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       packages: write
     env:
       IMAGE: ghcr.io/atgardner/unbound-docker
       HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
       TAG: ${{ needs.release-please.outputs.tag_name }}
     steps:
+      # release-please's own version (vX.Y.Z) tracks this repo's commit
+      # history, not unbound's - a repo-only fix bumps it same as an unbound
+      # version bump would. Reading UNBOUND_VERSION off the exact commit this
+      # release was cut from is what makes the extra tag below trustworthy.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.HEAD_SHA }}
+
+      - name: Read the unbound version this build was pinned to
+        id: unbound
+        run: |
+          set -euo pipefail
+          version=$(grep -m1 '^ARG UNBOUND_VERSION=' Dockerfile | cut -d= -f2)
+          if [ -z "$version" ]; then
+            echo "::error::could not read UNBOUND_VERSION from Dockerfile"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
@@ -66,6 +86,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Re-tag the image CI built for this commit
+        env:
+          UNBOUND_VERSION: ${{ steps.unbound.outputs.version }}
         run: |
           set -euo pipefail
 
@@ -79,9 +101,16 @@ jobs:
             exit 1
           fi
 
+          # unbound-X.Y.Z moves to whichever release build most recently used
+          # that unbound version; once a release bumps to a newer unbound
+          # version, this tag stops moving and becomes a fixed pointer at the
+          # last release that had it. Neither prune workflow touches it - it
+          # always carries a tag, so the sweep treats it as a root, and it
+          # never matches the branch/main-sha shapes the other two prune on.
           docker buildx imagetools create \
             -t "$IMAGE:$TAG" \
             -t "$IMAGE:latest" \
+            -t "$IMAGE:unbound-$UNBOUND_VERSION" \
             "$source"
 
           docker buildx imagetools inspect "$IMAGE:$TAG" \

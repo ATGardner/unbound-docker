@@ -1,9 +1,36 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["local>ATGardner/home//renovate-presets/default"],
+  "extends": [
+    "config:best-practices",
+    "helpers:pinGitHubActionDigestsToSemver",
+    ":prHourlyLimitNone"
+  ],
+  "labels": ["dependencies"],
+  "semanticCommits": "enabled",
+  "timezone": "Asia/Jerusalem",
+  "minimumReleaseAge": "3 days",
+  "minimumReleaseAgeBehaviour": "timestamp-optional",
+  "rebaseWhen": "behind-base-branch",
   "packageRules": [
     {
-      "description": "The shared preset's fix(deps)/chore(deps) split is npm-specific (matchDepTypes: dependencies), so it never applies to this repo's Dockerfile bumps - they'd default to chore(deps), which release-please ignores when deciding whether to cut a release. This repo exists specifically to track NLnetLabs/unbound releases, so its bump has to actually trigger one.",
+      "description": "Automerge non-major updates - the unbound version bump is the one that matters most here, and this is what keeps it from going stale the way pixelfederation/unbound's own PRs did.",
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "description": "Actions bumps touch the release and GHCR-publish workflows, where a bad version fails quietly instead of turning CI red. Digests stay pinned by helpers:pinGitHubActionDigestsToSemver; merge by hand.",
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions",
+      "automerge": false
+    },
+    {
+      "description": "Base-image digest refreshes are content-identical rebuilds; CI is enough.",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["digest", "pinDigest"],
+      "automerge": true
+    },
+    {
+      "description": "release-please only cuts a release from fix/feat commits, and Renovate's default for a Dockerfile ARG bump is chore(deps). This repo exists specifically to track NLnetLabs/unbound releases, so that bump has to read as a fix or it would merge cleanly and never actually ship.",
       "matchManagers": ["dockerfile"],
       "matchDepNames": ["NLnetLabs/unbound"],
       "semanticCommitType": "fix"

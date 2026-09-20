@@ -1,4 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["local>ATGardner/home//renovate-presets/default"]
+  "extends": ["local>ATGardner/home//renovate-presets/default"],
+  "packageRules": [
+    {
+      "description": "The shared preset's fix(deps)/chore(deps) split is npm-specific (matchDepTypes: dependencies), so it never applies to this repo's Dockerfile bumps - they'd default to chore(deps), which release-please ignores when deciding whether to cut a release. This repo exists specifically to track NLnetLabs/unbound releases, so its bump has to actually trigger one.",
+      "matchManagers": ["dockerfile"],
+      "matchDepNames": ["NLnetLabs/unbound"],
+      "semanticCommitType": "fix"
+    }
+  ]
 }
